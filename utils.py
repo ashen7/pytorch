@@ -5,16 +5,23 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # 选择数据集和模型
-DATASET = "pokemon"
+DATASET = "cifar10"
 MODEL_NAME = "vggnet"
+TEST_MODE = "eval"     # eval: evaluate model，test: test model inference 
 
 # 网络超参
 RESIZE_HEIGHT = 64
 RESIZE_WIDTH = 64
-BATCH_SIZE = 32
+BATCH_SIZE = 100
 LEARNING_RATE = 0.01
-MAX_EPOCH = 30
-ITER_INTERVAL = 1
+MAX_EPOCH = 20
+ITER_INTERVAL = 10
+SAVE_MODEL_INTERVAL = 2
+
+# GPU Device
+DEVICE_ID = 1
+DEVICE_ID_LIST = [0, 1, 2, 3]
+USE_MULTIGPU = False
 
 # 数据集
 NUM_CORES = 6
@@ -34,6 +41,7 @@ def plot_loss():
     plt.plot(range(0, len(train_loss_list)), train_loss_list, 'g', label='loss')
     plt.legend(loc='best')
     plt.show()
+    plt.savefig('loss.jpg')
 
 def plot_acc():
     plt.title('Validation/Test Accuracy')
@@ -43,3 +51,5 @@ def plot_acc():
     plt.plot(range(0, len(test_acc_list)), test_acc_list, 'r', label='test acc')
     plt.legend(['validation accuracy', 'test accuracy'], loc='best')
     plt.show()
+    plt.savefig('accuracy.jpg')
+

@@ -55,7 +55,11 @@ def get_pokemon_test_dataset(batch_size):
     return test_loader
 
 def main():
-    dataset = get_pokemon_training_dataset(BATCH_SIZE)
+    #dataset = get_pokemon_training_dataset(BATCH_SIZE)
+    dataset = get_cifar10_training_dataset(BATCH_SIZE)
+    for (batch_sample, batch_label) in dataset:
+        print(batch_sample.shape, batch_label.shape)
+        exit(0)
 
 if __name__ == '__main__':
     main()

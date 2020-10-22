@@ -7,31 +7,37 @@ import csv
 import torch
 import torchvision
 import torchvision.transforms as transforms
-import visdom
+try:
+    import visdom
+except ImportError:
+    pass
 from PIL import Image
 
 from utils import *
 
 class Pokemon(torch.utils.data.Dataset):
-    def __init__(self, root, resize_h, resize_w, mode):
+    def __init__(self, root, resize_h, resize_w, mode = None):
         super(Pokemon, self).__init__()
         self.root = root
         self.resize_h = resize_h
         self.resize_w = resize_w
         self.labels_dict = dict()
-        # 进行数据加强
+        count = 0
+
+        # 类属性 进行数据加强
         self.transform = transforms.Compose([
-            lambda x: Image.open(x).convert('RGB'),  # 读图片解码RGB
+            #lambda x: Image.open(x).convert('RGB'),  # 读图片解码RGB
             transforms.Resize((int(self.resize_h * 1.25), int(self.resize_w * 1.25))),  # resize
             transforms.RandomRotation(15),          # 随机旋转 设置旋转的度数小一些，否则会增加网络的学习难度
             transforms.CenterCrop(self.resize_h),   # 中心裁剪 此时：既旋转了又不至于导致图片变得比较的复杂
             transforms.ToTensor(),                  # numpy.ndarray to torch.tensor 并且 / 255到[0,1]
             transforms.Normalize(mean=[0.485, 0.456, 0.406],  # 归一化 每个通道的均值和方差
                                  std=[0.229, 0.224, 0.225])
-
         ])
 
-        count = 0
+        if mode == None:
+            return
+
         for classify_name in sorted(os.listdir(os.path.join(root))):
             if not os.path.isdir(os.path.join(root, classify_name)):
                 continue
@@ -45,7 +51,7 @@ class Pokemon(torch.utils.data.Dataset):
         if mode == 'train':
             self.samples = self.samples[:int(0.8 * len(self.samples))]
             self.labels = self.labels[:int(0.8 * len(self.labels))]
-        else:
+        elif mode == 'test':
             self.samples = self.samples[int(0.8 * len(self.samples)):]
             self.labels = self.labels[int(0.8 * len(self.labels)):]
 
@@ -87,6 +93,7 @@ class Pokemon(torch.utils.data.Dataset):
     # 返回一个sample，label
     def __getitem__(self, index):
         sample, label = self.samples[index], self.labels[index]
+        sample = Image.open(sample).convert('RGB')  # 读图片解码RGB
         sample = self.transform(sample)
         label = torch.tensor(label)
 
@@ -102,6 +109,10 @@ class Pokemon(torch.utils.data.Dataset):
 
         origin_sample = sample * std + mean
         return origin_sample
+    
+    # 图像增强
+    def transform(image):
+        return self.transform(image)
 
 def main():
     # 验证工作

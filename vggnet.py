@@ -49,7 +49,7 @@ class VGGNet(nn.Module):
         self.relu5 = nn.ReLU()
 
         # 全连接层  输入节点 输出节点
-        self.fc14 = nn.Linear(512*5*5, 1024)
+        self.fc14 = nn.Linear(512*4*4, 1024)
         self.dropout1 = nn.Dropout2d()
         self.fc15 = nn.Linear(1024, 1024)
         self.dropout2 = nn.Dropout2d()
@@ -92,7 +92,8 @@ class VGGNet(nn.Module):
         # print(vggnet.size())
 
         # view就是reshape
-        vggnet = vggnet.view(-1, vggnet.shape[1] * vggnet.shape[2] * vggnet.shape[3])
+        single_size = vggnet.shape[1] * vggnet.shape[2] * vggnet.shape[3]
+        vggnet = vggnet.view(-1, single_size)
         vggnet = F.relu(self.fc14(vggnet))
         vggnet = self.dropout1(vggnet)
         vggnet = F.relu(self.fc15(vggnet))
