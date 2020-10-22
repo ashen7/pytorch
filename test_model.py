@@ -41,7 +41,7 @@ def evaluate_model(model, device, model_path, get_test_dataset, classes = None, 
             # data得到tensor转成python数组(用于数组)
             _, predict_output = torch.max(output.data, 1)
             acc = (predict_output == test_batch_label).sum().item()
-            print('current batch accuracy is {}%'.format(acc))
+            print('current batch top-1 accuracy is {}%'.format(acc))
             test_acc += acc
 
             for i in range(len(classes)):
@@ -50,7 +50,7 @@ def evaluate_model(model, device, model_path, get_test_dataset, classes = None, 
                 if predict_output[i] == test_batch_label[i]:
                     predict_result_dict[int(predict_output[i].item())] += 1
 
-    print('Test Accuracy is: {}%\n'.format(test_acc / test_batch_num))
+    print('Test Top-1 Accuracy is: {}%\n'.format(test_acc / test_batch_num))
     for i in range(len(classes)):
         print('{}: {}%'.format(classes[i], round(predict_result_dict[i] / ground_truth_dict[i] * 100.0, 2)))
 
@@ -82,7 +82,7 @@ def test_model_inference(model, device, model_path, classes):
         output = model.forward(image)
         # data得到tensor转成python数组(用于数组)
         _, predict_output = torch.max(output.data, 1)
-        print('这张图片是: ', classes[int(predict_output)])
+        print(image_path, ':', classes[int(predict_output)])
 
 
 def main():

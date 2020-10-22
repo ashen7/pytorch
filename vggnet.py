@@ -49,7 +49,7 @@ class VGGNet(nn.Module):
         self.relu5 = nn.ReLU()
 
         # 全连接层  输入节点 输出节点
-        self.fc14 = nn.Linear(512*4*4, 1024)
+        self.fc14 = nn.Linear(512*10*10, 1024)
         self.dropout1 = nn.Dropout2d()
         self.fc15 = nn.Linear(1024, 1024)
         self.dropout2 = nn.Dropout2d()

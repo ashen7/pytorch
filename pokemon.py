@@ -21,21 +21,33 @@ class Pokemon(torch.utils.data.Dataset):
         self.root = root
         self.resize_h = resize_h
         self.resize_w = resize_w
+        self.mode = mode
         self.labels_dict = dict()
         count = 0
 
-        # 类属性 进行数据加强
-        self.transform = transforms.Compose([
-            #lambda x: Image.open(x).convert('RGB'),  # 读图片解码RGB
+        # 数据增强
+        self.train_transform = transforms.Compose([
+            #lambda x: Image.open(x).convert('RGB'),          # 读图片解码RGB
             transforms.Resize((int(self.resize_h * 1.25), int(self.resize_w * 1.25))),  # resize
-            transforms.RandomRotation(15),          # 随机旋转 设置旋转的度数小一些，否则会增加网络的学习难度
-            transforms.CenterCrop(self.resize_h),   # 中心裁剪 此时：既旋转了又不至于导致图片变得比较的复杂
-            transforms.ToTensor(),                  # numpy.ndarray to torch.tensor 并且 / 255到[0,1]
-            transforms.Normalize(mean=[0.485, 0.456, 0.406],  # 归一化 每个通道的均值和方差
+            transforms.RandomRotation(15),                    # 随机旋转 设置旋转的度数小一些，否则会增加网络的学习难度
+            transforms.RandomHorizontalFlip(),                # 随机水平翻转
+            transforms.ColorJitter(),                         # 颜色抖动 
+            transforms.CenterCrop(self.resize_h),             # 中心裁剪 此时：既旋转了又不至于导致图片变得比较的复杂
+            transforms.ToTensor(),                            # numpy.ndarray to torch.tensor 并且 / 255到[0,1]
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],  # ImageNet标准 归一化 每个通道的均值和方差
                                  std=[0.229, 0.224, 0.225])
         ])
 
-        if mode == None:
+        # 数据增强
+        self.test_transform = transforms.Compose([
+            transforms.Resize((int(self.resize_h * 1.25), int(self.resize_w * 1.25))),  # resize
+            transforms.CenterCrop(self.resize_h),             # 中心裁剪 此时：既旋转了又不至于导致图片变得比较的复杂
+            transforms.ToTensor(),                            # numpy.ndarray to torch.tensor 并且 / 255到[0,1]
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],  # ImageNet标准 归一化 每个通道的均值和方差
+                                 std=[0.229, 0.224, 0.225])
+        ])
+
+        if self.mode == None:
             return
 
         for classify_name in sorted(os.listdir(os.path.join(root))):
@@ -94,7 +106,10 @@ class Pokemon(torch.utils.data.Dataset):
     def __getitem__(self, index):
         sample, label = self.samples[index], self.labels[index]
         sample = Image.open(sample).convert('RGB')  # 读图片解码RGB
-        sample = self.transform(sample)
+        if self.mode == 'train':
+            sample = self.train_transform(sample)
+        else:
+            sample = self.test_transform(sample)
         label = torch.tensor(label)
 
         return sample, label
@@ -112,7 +127,7 @@ class Pokemon(torch.utils.data.Dataset):
     
     # 图像增强
     def transform(image):
-        return self.transform(image)
+        return self.test_transform(image)
 
 def main():
     # 验证工作

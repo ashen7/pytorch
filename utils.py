@@ -5,17 +5,17 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # 选择数据集和模型
-DATASET = "cifar10"
+DATASET = "pokemon"
 MODEL_NAME = "vggnet"
 TEST_MODE = "eval"     # eval: evaluate model，test: test model inference 
 
 # 网络超参
-RESIZE_HEIGHT = 64
-RESIZE_WIDTH = 64
-BATCH_SIZE = 100
+RESIZE_HEIGHT = 224
+RESIZE_WIDTH = 224
+BATCH_SIZE = 50
 LEARNING_RATE = 0.01
-MAX_EPOCH = 20
-ITER_INTERVAL = 10
+MAX_EPOCH = 50
+ITER_INTERVAL = 1
 SAVE_MODEL_INTERVAL = 2
 
 # GPU Device
