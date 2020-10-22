@@ -3,17 +3,13 @@ import time
 from tqdm import tqdm
 
 import torch
-import torch.nn as nn
-import torch.optim as optim
 #import visdom
 
-from vggnet import VGGNet
-from mobilenet_v3 import MobileNetV3_Large, MobileNetV3_Small
 from data_preprocess import *
 from utils import *
 
 def train_model(model, device, model_path, get_training_dataset, get_test_dataset,
-                batch_size = 100, learning_rate = 0.001, max_epoch = 20):
+                batch_size = 100, learning_rate = 0.001, max_epoch = 20, momentum = 0.9):
     global val_acc_list
     global test_acc_list
     train_loader = get_training_dataset(batch_size=batch_size)
@@ -22,8 +18,10 @@ def train_model(model, device, model_path, get_training_dataset, get_test_datase
     val_batch_num = int(0.2 * train_total_samples)
 
     init_epoch = 0
+    criterion = None
     # 优化方法 选择SGD 因为模型每层使用了BN 所以可以使用大一点的学习率 加快收敛
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
+    exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=10, gamma=0.5)
 
     # 可视化训练
     # viz = visdom.Visdom()
@@ -31,18 +29,18 @@ def train_model(model, device, model_path, get_training_dataset, get_test_datase
     # viz.line([0], [-1], win='val_acc', opts=dict(title='val_acc'))
 
     # 加载模型
-    if not os.path.exists(model_path):
-        # 定义交叉熵loss 包含softmax和loss
-        criterion = nn.CrossEntropyLoss()
-    else:
+    if os.path.exists(model_path) and USE_PRETRAIN_MODEL is not True:
         # 导入模型
         pretrain_model = torch.load(model_path, map_location='cpu')
         # 恢复网络的参数 得到上次训练的epoch 和loss
-        model.load_state_dict(pretrain_model['model_state_dict'])
-        optimizer.load_state_dict(pretrain_model['optimizer_state_dict'])
         init_epoch = pretrain_model['epoch']
         criterion = pretrain_model['criterion']
+        model.load_state_dict(pretrain_model['model_state_dict'])
+        optimizer.load_state_dict(pretrain_model['optimizer_state_dict'])
         print('Successfully Load {} Model'.format(model_path))
+    else:
+        # 定义交叉熵loss 包含softmax和loss
+        criterion = nn.CrossEntropyLoss()
 
     # train时的BN作用和test不一样
     model.train()
@@ -53,6 +51,7 @@ def train_model(model, device, model_path, get_training_dataset, get_test_datase
         train_acc = 0
         val_acc = 0
         global_step = 0
+        exp_lr_scheduler.step()  
 
         for batch_idx, train_data in enumerate(train_loader, start=0):
             if batch_idx >= train_batch_num:
@@ -65,7 +64,7 @@ def train_model(model, device, model_path, get_training_dataset, get_test_datase
                     # 前向计算
                     output = model.forward(val_batch_sample)
                     # data得到tensor转成python数组(用于数组)
-                    _, predict_output = torch.max(output.data, 1)
+                    _, predict_output = torch.max(output.data, dim=1)
                     val_acc += (predict_output == val_batch_label).sum().item()
                     if (batch_idx + 1) == train_total_samples:
                         print('=====================Epoch {} validation accuracy is: {}%, spend time: {}s====================='.format(epoch + 1, val_acc / val_batch_num, time.time() - begin))
@@ -90,10 +89,10 @@ def train_model(model, device, model_path, get_training_dataset, get_test_datase
                 # viz.line([loss.item()], [global_step], win='loss', update='append')
                 global_step += 1
                 # data得到tensor转成python数组(用于数组)
-                _, predict_output = torch.max(output.data, 1)
+                _, predict_output = torch.max(output.data, dim=1)
                 train_acc += (predict_output == train_batch_label).sum().item()
                 if (batch_idx + 1) % ITER_INTERVAL == 0:
-                    print('loss : {}, train acc : {}%'.format(train_loss / ITER_INTERVAL, train_acc / ITER_INTERVAL))
+                    print('train loss : {}, train acc : {}%'.format(train_loss / ITER_INTERVAL, train_acc / ITER_INTERVAL))
                     train_loss_list.append(train_loss / ITER_INTERVAL)
                     train_loss = 0
                     train_acc = 0
@@ -113,7 +112,7 @@ def train_model(model, device, model_path, get_training_dataset, get_test_datase
                     # 前向计算
                     output = model.forward(test_batch_sample)
                     # data得到tensor转成python数组(用于数组)
-                    _, predict_output = torch.max(output.data, 1)
+                    _, predict_output = torch.max(output.data, dim=1)
                     test_acc += (predict_output == test_batch_label).sum().item()
             print('=====================Epoch {} test accuracy is: {}%====================='.format(epoch + 1, test_acc / test_batch_num))
             test_acc_list.append(test_acc / test_batch_num)
@@ -145,29 +144,12 @@ def main():
     model_path = os.getcwd() + "/models/{}_{}.pth".format(MODEL_NAME, DATASET)
 
     # 选择数据集
-    if DATASET == "cifar10":
-        get_training_dataset = get_cifar10_training_dataset
-        get_test_dataset = get_cifar10_test_dataset
-    elif DATASET == "pokemon":
-        get_training_dataset = get_pokemon_training_dataset
-        get_test_dataset = get_pokemon_test_dataset
-
+    get_training_dataset, get_test_dataset = create_dataset()
     # 构建网络
-    if MODEL_NAME == "vggnet":
-        model = VGGNet()
-    elif MODEL_NAME == "mobilenet_v3":
-        # model = MobileNetV3()
-        pass
+    model = create_model() 
 
-    # 用GPU运行
-    if torch.cuda.device_count() > 1:
-        if USE_MULTIGPU:
-            model = nn.DataParallel(model, device_ids=DEVICE_ID_LIST)
-        else:
-            #os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_ID
-            device = torch.device("cuda:{}".format(DEVICE_ID))
-    model = model.to(device)
-    train_model(model, device, model_path, get_training_dataset, get_test_dataset, BATCH_SIZE, LEARNING_RATE, MAX_EPOCH)
+    train_model(model, device, model_path, get_training_dataset, get_test_dataset, 
+                BATCH_SIZE, LEARNING_RATE, MAX_EPOCH)
     plot_loss()
     plot_acc()
 
