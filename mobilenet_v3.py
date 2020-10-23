@@ -62,9 +62,9 @@ class Block(nn.Module):
         return out
 
 
-class MobileNetV3_Large(nn.Module):
+class MobileNetV3(nn.Module):
     def __init__(self, num_classes=1000):
-        super(MobileNetV3_Large, self).__init__()
+        super(MobileNetV3, self).__init__()
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(16)
         self.hs1 = hswish()
@@ -99,16 +99,16 @@ class MobileNetV3_Large(nn.Module):
     def init_params(self):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                init.kaiming_normal_(m.weight, mode='fan_out')
+                nn.init.kaiming_normal_(m.weight, mode='fan_out')
                 if m.bias is not None:
-                    init.constant_(m.bias, 0)
+                    nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.BatchNorm2d):
-                init.constant_(m.weight, 1)
-                init.constant_(m.bias, 0)
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.Linear):
-                init.normal_(m.weight, std=0.001)
+                nn.init.normal_(m.weight, std=0.001)
                 if m.bias is not None:
-                    init.constant_(m.bias, 0)
+                    nn.init.constant_(m.bias, 0)
 
     def forward(self, x):
         out = self.hs1(self.bn1(self.conv1(x)))

@@ -126,7 +126,7 @@ class Pokemon(torch.utils.data.Dataset):
         return origin_sample
     
     # 图像增强
-    def transform(image):
+    def transform(self, image):
         return self.test_transform(image)
 
 def main():

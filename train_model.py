@@ -12,12 +12,12 @@ from utils import *
 
 def train_model(model, device, model_path, train_loader, test_loader,
                 batch_size = 100, learning_rate = 0.001, max_epoch = 20, momentum = 0.9):
-    global TRAIN_LOSS_LIST
-    global VAL_ACC_LIST
-    global TEST_ACC_LIST
+    global train_loss_list
+    global val_acc_list
+    global test_acc_list
     train_total_samples = len(train_loader)
-    train_batch_num = int(0.8 * train_total_samples)
-    val_batch_num = int(0.2 * train_total_samples)
+    train_iter_num = int(0.8 * train_total_samples)
+    val_iter_num = int(0.2 * train_total_samples)
 
     init_epoch = 0
     criterion = None
@@ -56,7 +56,7 @@ def train_model(model, device, model_path, train_loader, test_loader,
         exp_lr_scheduler.step()  
 
         for batch_idx, train_data in enumerate(train_loader, start=0):
-            if batch_idx >= train_batch_num:
+            if batch_idx >= train_iter_num:
                 # 不计算梯度
                 with torch.no_grad():
                     # 验证
@@ -67,10 +67,12 @@ def train_model(model, device, model_path, train_loader, test_loader,
                     output = model.forward(val_batch_sample)
                     # data得到tensor转成python数组(用于数组)
                     _, predict_output = torch.max(output.data, dim=1)
-                    val_acc += (predict_output == val_batch_label).sum().item()
+                    correct = (predict_output == val_batch_label).sum().item()
+                    acc = (correct / len(predict_output))
+                    val_acc += acc
                     if (batch_idx + 1) == train_total_samples:
-                        print('=====================Epoch {} validation accuracy is: {}%, spend time: {}s====================='.format(epoch + 1, val_acc / val_batch_num, time.time() - begin))
-                        VAL_ACC_LIST.append(val_acc / val_batch_num)
+                        print('=====================Epoch {} validation accuracy is: {}%, spend time: {}s====================='.format(epoch + 1, round(val_acc / val_iter_num * 100.0, 2), time.time() - begin))
+                        val_acc_list.append(val_acc / val_iter_num)
                         # viz.line([val_acc / ITER_INTERVAL], [global_step], win='val_acc', update='append')
                         val_acc = 0
             else:
@@ -92,17 +94,19 @@ def train_model(model, device, model_path, train_loader, test_loader,
                 global_step += 1
                 # data得到tensor转成python数组(用于数组)
                 _, predict_output = torch.max(output.data, dim=1)
-                train_acc += (predict_output == train_batch_label).sum().item()
+                correct = (predict_output == train_batch_label).sum().item()
+                acc = (correct / len(predict_output))
+                train_acc += acc
                 if (batch_idx + 1) % ITER_INTERVAL == 0:
-                    print('train loss : {}, train acc : {}%'.format(train_loss / ITER_INTERVAL, train_acc / ITER_INTERVAL))
-                    TRAIN_LOSS_LIST.append(train_loss / ITER_INTERVAL)
+                    print('train loss : {}, train acc : {}%'.format(train_loss / ITER_INTERVAL, round(train_acc / ITER_INTERVAL * 100.0, 2)))
+                    train_loss_list.append(train_loss / ITER_INTERVAL)
                     train_loss = 0
                     train_acc = 0
 
         # 这里一轮迭代完成 每迭代2轮保存一次模型 并测试一次
         if (epoch + 1) % SAVE_MODEL_INTERVAL == 0:
             # 得到测试集
-            test_batch_num = len(test_loader)
+            test_iter_num = len(test_loader)
             test_acc = 0
             # 不计算梯度
             with torch.no_grad():
@@ -114,9 +118,11 @@ def train_model(model, device, model_path, train_loader, test_loader,
                     output = model.forward(test_batch_sample)
                     # data得到tensor转成python数组(用于数组)
                     _, predict_output = torch.max(output.data, dim=1)
-                    test_acc += (predict_output == test_batch_label).sum().item()
-            print('=====================Epoch {} test accuracy is: {}%====================='.format(epoch + 1, test_acc / test_batch_num))
-            TEST_ACC_LIST.append(test_acc / test_batch_num)
+                    correct = (predict_output == test_batch_label).sum().item()
+                    acc = correct / len(predict_output)
+                    test_acc += acc
+            print('=====================Epoch {} test accuracy is: {}%====================='.format(epoch + 1, round(test_acc / test_iter_num * 100, 2)))
+            test_acc_list.append(test_acc / test_iter_num)
         
             #if torch.cuda.device_count() > 1 and USE_MULTIGPU:
             if isinstance(model, torch.nn.DataParallel):
@@ -150,14 +156,25 @@ def main():
     learning_rate = LEARNING_RATE
     max_epoch = MAX_EPOCH
     dataset = DATASET
+    input_size = INPUT_SIZE
     model_path = os.getcwd() + "/models/{}_{}.pth".format(model_name, dataset)
 
     # 得到数据集
     train_loader = get_training_dataset(batch_size)
     test_loader, classes = get_test_dataset(batch_size)
+    num_classes = len(classes)
     # 构建网络 
-    model = load_model(model_name, use_pretrain_model, device, device_id, use_multigpu, device_id_list) 
-    print(model)
+    model = load_model(model_name, use_pretrain_model, num_classes, input_size) 
+
+    # 用GPU运行
+    if torch.cuda.device_count() > 1:
+        if use_multigpu:
+            model = nn.DataParallel(model, device_ids=device_id_list)
+            device = torch.device("cuda:{}".format(device_id_list[0]))
+        else:
+            #os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_ID
+            device = torch.device("cuda:{}".format(device_id))
+    model = model.to(device)
 
     # 训练模型
     train_model(model, device, model_path, train_loader, test_loader, 
