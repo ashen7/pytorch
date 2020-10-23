@@ -10,8 +10,8 @@ import torch.optim as optim
 from data_preprocess import get_training_dataset, get_test_dataset
 from utils import *
 
-def train_model(model, device, model_path, train_loader, test_loader,
-                batch_size = 100, learning_rate = 0.001, max_epoch = 20, momentum = 0.9):
+def finetune_model(model, device, model_path, train_loader, test_loader,
+                   batch_size = 100, learning_rate = 0.001, max_epoch = 20, momentum = 0.9):
     global train_loss_list
     global val_acc_list
     global test_acc_list
@@ -24,11 +24,6 @@ def train_model(model, device, model_path, train_loader, test_loader,
     # 优化方法 选择SGD 因为模型每层使用了BN 所以可以使用大一点的学习率 加快收敛
     optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
     exp_lr_scheduler = optim.lr_scheduler.StepLR(optimizer=optimizer, step_size=10, gamma=0.5)
-
-    # 可视化训练
-    # viz = visdom.Visdom()
-    # viz.line([0], [-1], win='loss', opts=dict(title='loss'))
-    # viz.line([0], [-1], win='val_acc', opts=dict(title='val_acc'))
 
     # 加载模型
     if os.path.exists(model_path) and USE_PRETRAIN_MODEL is not True:

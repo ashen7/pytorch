@@ -60,7 +60,10 @@ def load_model(model_name, use_pretrain_model, num_classes, input_size = None):
     elif model_name == "resnet50":
         pass
     elif model_name == "mobilenet_v3":
-        model = MobileNetV3(num_classes)
+        if use_pretrain_model:
+            model = MobileNetV3(num_classes)
+        else:
+            model = MobileNetV3(num_classes)
     elif model_name == "eff":
         pass
     else:
