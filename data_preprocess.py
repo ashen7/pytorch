@@ -54,6 +54,35 @@ def get_pokemon_test_dataset(batch_size):
 
     return test_loader
 
+def get_training_dataset(batch_size):
+    train_loader = None
+    
+    if DATASET == "cifar10":
+        train_loader = get_cifar10_training_dataset(batch_size)
+    elif DATASET == "pokemon":
+        train_loader = get_pokemon_training_dataset(batch_size)
+    else:
+        print("暂不支持该数据集!")
+        exit(0)
+    
+    return train_loader
+
+def get_test_dataset(batch_size):
+    test_loader = None
+    classes = []
+
+    if DATASET == "cifar10":
+        test_loader = get_cifar10_test_dataset(batch_size)
+        classes = ['飞机', '汽车', '小鸟', '小猫', '小鹿', '小狗', '青蛙', '小马', '小船', '卡车']
+    elif DATASET == "pokemon":
+        test_loader = get_pokemon_test_dataset(batch_size)
+        classes = ['妙蛙种子', '小火龙', '超梦', '皮卡丘', '杰尼龟']
+    else:
+        print("暂不支持该数据集!")
+        exit(0)
+    
+    return test_loader, classes
+
 def main():
     #dataset = get_pokemon_training_dataset(BATCH_SIZE)
     dataset = get_cifar10_training_dataset(BATCH_SIZE)

@@ -1,16 +1,14 @@
 import os
 import torch
 from PIL import Image
+from collections import OrderedDict
 
-from vggnet import VGGNet
-from mobilenet_v3 import MobileNetV3_Large, MobileNetV3_Small
-from data_preprocess import *
+from data_preprocess import get_training_dataset, get_test_dataset
 from utils import *
 from pokemon import Pokemon
 
 # 评估模型
-def evaluate_model(model, device, model_path, get_test_dataset, classes = None, batch_size = 100):
-    test_loader = get_test_dataset(batch_size)
+def evaluate_model(model, device, model_path, test_loader, classes, batch_size = 100):
     test_batch_num = len(test_loader)
     test_acc = 0
     ground_truth_dict = dict()
@@ -24,8 +22,23 @@ def evaluate_model(model, device, model_path, get_test_dataset, classes = None, 
     if os.path.exists(model_path):
         # 导入模型
         pretrain_model = torch.load(model_path)
+        state_dict = pretrain_model['model_state_dict']
+        new_state_dict = OrderedDict()
+        is_multigpu_train = False
+        for key, value in state_dict.items():
+            if key[:6] == "module":
+                is_multigpu_train = True
+                new_key = key[7:]
+                new_state_dict[new_key] = value
+            else:
+                break
+
         # 恢复网络的参数
-        model.load_state_dict(pretrain_model['model_state_dict'])
+        if is_multigpu_train:
+            model.load_state_dict(new_state_dict)
+        else:
+            model.load_state_dict(state_dict)
+
         print('Successfully Load {} Model'.format(model_path))
 
     # train时的BN作用和test不一样
@@ -56,7 +69,7 @@ def evaluate_model(model, device, model_path, get_test_dataset, classes = None, 
 
 
 # 测试一张图片的推理结果
-def test_model_inference(model, device, model_path, classes):
+def test_model_inference(model, device, model_path):
     image_path = os.path.join(POKEMON_DIR, '4杰尼龟', '00000020.jpg')
 
     # 加载模型
@@ -86,38 +99,25 @@ def test_model_inference(model, device, model_path, classes):
 
 
 def main():
-    get_training_dataset = None
-    get_test_dataset = None
-    model = None
-    classes = None
+    model_name = MODEL_NAME
+    use_pretrain_model = USE_PRETRAIN_MODEL
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model_path = os.getcwd() + "/models/{}_{}.pth".format(MODEL_NAME, DATASET)
+    device_id = 0
+    batch_size = BATCH_SIZE
+    dataset = DATASET
+    model_path = os.getcwd() + "/models/{}_{}.pth".format(model_name, dataset)
 
-    # 选择数据集
-    if DATASET == "cifar10":
-        get_test_dataset = get_cifar10_test_dataset
-        classes = ['飞机', '汽车', '小鸟', '小猫', '小鹿', '小狗', '青蛙', '小马', '小船', '卡车']
-    elif DATASET == "pokemon":
-        get_test_dataset = get_pokemon_test_dataset
-        classes = ['妙蛙种子', '小火龙', '超梦', '皮卡丘', '杰尼龟']
-
+    # 得到数据集
+    test_loader, classes = get_test_dataset(batch_size)
     # 构建网络
-    if MODEL_NAME == "vggnet":
-        model = VGGNet()
-    elif MODEL_NAME == "mobilenet_v3":
-        model = MobileNetV3_Large()
-
-    # 用GPU运行
-    if torch.cuda.device_count() > 1:
-        #os.environ['CUDA_VISIBLE_DEVICE'] = DEVICE_ID
-        device = torch.device("cuda:{}".format(DEVICE_ID))
-    model = model.to(device)
+    model = load_model(model_name, use_pretrain_model, device, device_id) 
+    print(model)
 
     # 评估模型还是测试模型推理结果(单张图)
     if TEST_MODE == "eval":
-        evaluate_model(model, device, model_path, get_test_dataset, classes, BATCH_SIZE)
+        evaluate_model(model, device, model_path, test_loader, classes, batch_size)
     elif TEST_MODE == "test":
-        test_model_inference(model, device, model_path, classes)
+        test_model_inference(model, device, model_path)
     
 if __name__ == '__main__':
     main()

@@ -3,16 +3,18 @@ import time
 from tqdm import tqdm
 
 import torch
+import torch.nn as nn
+import torch.optim as optim
 #import visdom
 
-from data_preprocess import *
+from data_preprocess import get_training_dataset, get_test_dataset
 from utils import *
 
-def train_model(model, device, model_path, get_training_dataset, get_test_dataset,
+def train_model(model, device, model_path, train_loader, test_loader,
                 batch_size = 100, learning_rate = 0.001, max_epoch = 20, momentum = 0.9):
-    global val_acc_list
-    global test_acc_list
-    train_loader = get_training_dataset(batch_size=batch_size)
+    global TRAIN_LOSS_LIST
+    global VAL_ACC_LIST
+    global TEST_ACC_LIST
     train_total_samples = len(train_loader)
     train_batch_num = int(0.8 * train_total_samples)
     val_batch_num = int(0.2 * train_total_samples)
@@ -68,7 +70,7 @@ def train_model(model, device, model_path, get_training_dataset, get_test_datase
                     val_acc += (predict_output == val_batch_label).sum().item()
                     if (batch_idx + 1) == train_total_samples:
                         print('=====================Epoch {} validation accuracy is: {}%, spend time: {}s====================='.format(epoch + 1, val_acc / val_batch_num, time.time() - begin))
-                        val_acc_list.append(val_acc / val_batch_num)
+                        VAL_ACC_LIST.append(val_acc / val_batch_num)
                         # viz.line([val_acc / ITER_INTERVAL], [global_step], win='val_acc', update='append')
                         val_acc = 0
             else:
@@ -93,14 +95,13 @@ def train_model(model, device, model_path, get_training_dataset, get_test_datase
                 train_acc += (predict_output == train_batch_label).sum().item()
                 if (batch_idx + 1) % ITER_INTERVAL == 0:
                     print('train loss : {}, train acc : {}%'.format(train_loss / ITER_INTERVAL, train_acc / ITER_INTERVAL))
-                    train_loss_list.append(train_loss / ITER_INTERVAL)
+                    TRAIN_LOSS_LIST.append(train_loss / ITER_INTERVAL)
                     train_loss = 0
                     train_acc = 0
 
         # 这里一轮迭代完成 每迭代2轮保存一次模型 并测试一次
         if (epoch + 1) % SAVE_MODEL_INTERVAL == 0:
             # 得到测试集
-            test_loader = get_test_dataset(batch_size)
             test_batch_num = len(test_loader)
             test_acc = 0
             # 不计算梯度
@@ -115,12 +116,14 @@ def train_model(model, device, model_path, get_training_dataset, get_test_datase
                     _, predict_output = torch.max(output.data, dim=1)
                     test_acc += (predict_output == test_batch_label).sum().item()
             print('=====================Epoch {} test accuracy is: {}%====================='.format(epoch + 1, test_acc / test_batch_num))
-            test_acc_list.append(test_acc / test_batch_num)
+            TEST_ACC_LIST.append(test_acc / test_batch_num)
         
-            if torch.cuda.device_count() > 1 and USE_MULTIGPU:
+            #if torch.cuda.device_count() > 1 and USE_MULTIGPU:
+            if isinstance(model, torch.nn.DataParallel):
                 torch.save({
                     'epoch': epoch,
-                    'model_state_dict': model.module.state_dict(),
+                    #'model_state_dict': model.module.state_dict(),
+                    'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'criterion': criterion
                 }, model_path)
@@ -137,19 +140,28 @@ def train_model(model, device, model_path, get_training_dataset, get_test_datase
 
 def main():
     torch.manual_seed(1234)
-    get_training_dataset = None
-    get_test_dataset = None
-    model = None
+    model_name = MODEL_NAME
+    use_pretrain_model = USE_PRETRAIN_MODEL
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model_path = os.getcwd() + "/models/{}_{}.pth".format(MODEL_NAME, DATASET)
+    device_id = DEVICE_ID
+    use_multigpu = USE_MULTIGPU
+    device_id_list = DEVICE_ID_LIST
+    batch_size = BATCH_SIZE
+    learning_rate = LEARNING_RATE
+    max_epoch = MAX_EPOCH
+    dataset = DATASET
+    model_path = os.getcwd() + "/models/{}_{}.pth".format(model_name, dataset)
 
-    # 选择数据集
-    get_training_dataset, get_test_dataset = create_dataset()
-    # 构建网络
-    model = create_model() 
+    # 得到数据集
+    train_loader = get_training_dataset(batch_size)
+    test_loader, classes = get_test_dataset(batch_size)
+    # 构建网络 
+    model = load_model(model_name, use_pretrain_model, device, device_id, use_multigpu, device_id_list) 
+    print(model)
 
-    train_model(model, device, model_path, get_training_dataset, get_test_dataset, 
-                BATCH_SIZE, LEARNING_RATE, MAX_EPOCH)
+    # 训练模型
+    train_model(model, device, model_path, train_loader, test_loader, 
+                batch_size, learning_rate, max_epoch)
     plot_loss()
     plot_acc()
 

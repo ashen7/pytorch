@@ -1,11 +1,11 @@
 import os
 import warnings
 
-import numpy as np
-import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torchvision
+import numpy as np
+import matplotlib.pyplot as plt
 
 from vggnet import VGGNet
 from mobilenet_v3 import MobileNetV3_Large, MobileNetV3_Small
@@ -38,41 +38,33 @@ CIFAR10_DIR = os.path.join(DATASETS_DIR, 'cifar-10-batches-py')
 POKEMON_DIR = os.path.join(DATASETS_DIR, 'pokemon')
 
 # loss和acc
-train_loss_list = list()
-val_acc_list = list()
-test_acc_list = list()
+TRAIN_LOSS_LIST = list()
+VAL_ACC_LIST = list()
+TEST_ACC_LIST = list()
 
-# 选择数据集
-def create_dataset():
-    get_training_dataset, get_test_dataset = None, None
-    if DATASET == "cifar10":
-        get_training_dataset = get_cifar10_training_dataset
-        get_test_dataset = get_cifar10_test_dataset
-    elif DATASET == "pokemon":
-        get_training_dataset = get_pokemon_training_dataset
-        get_test_dataset = get_pokemon_test_dataset
-    else:
-        print("暂不支持该数据集!")
-        exit(0)
+# 导入模型
+def load_model(model_name, use_pretrain_model, device, device_id = 0, use_multigpu = False, device_id_list = []):
+    model = None
 
-    return get_training_dataset, get_test_dataset
-
-# 构建网络
-def create_model():
-    if MODEL_NAME == "vggnet":
-        if USE_PRETRAIN_MODEL:
+    if model_name == "vggnet":
+        if use_pretrain_model:
             model = torchvision.models.vgg16(pretrained=True)
         else:
             model = VGGNet()
-    elif MODEL_NAME == "mobilenet_v3":
-        # model = MobileNetV3()
+    elif model_name == "resnet18":
+        pass
+    elif model_name == "resnet50":
+        pass
+    elif model_name == "mobilenet_v3":
+        model = MobileNetV3()
+    elif model_name == "eff":
         pass
     else:
         print("暂不支持该模型!")
         exit(0)
 
     # 冻结前面的参数 只训练最后的全连接层
-    if USE_PRETRAIN_MODEL:
+    if use_pretrain_model:
         for param in model.parameters():
             param.requires_grad = False
         model.classifier[6] = nn.Sequential(
@@ -88,11 +80,12 @@ def create_model():
 
     # 用GPU运行
     if torch.cuda.device_count() > 1:
-        if USE_MULTIGPU:
-            model = nn.DataParallel(model, device_ids=DEVICE_ID_LIST)
+        if use_multigpu:
+            model = nn.DataParallel(model, device_ids=device_id_list)
+            device = torch.device("cuda:{}".format(device_id_list[0]))
         else:
             #os.environ['CUDA_VISIBLE_DEVICES'] = DEVICE_ID
-            device = torch.device("cuda:{}".format(DEVICE_ID))
+            device = torch.device("cuda:{}".format(device_id))
     model = model.to(device)
 
     return model
@@ -101,7 +94,7 @@ def plot_loss():
     plt.title('Loss')
     plt.xlabel('epoch')
     plt.ylabel('loss')
-    plt.plot(range(0, len(train_loss_list)), train_loss_list, 'g', label='loss')
+    plt.plot(range(0, len(TRAIN_LOSS_LIST)), TRAIN_LOSS_LIST, 'g', label='loss')
     plt.legend(loc='best')
     plt.show()
     plt.savefig('loss.jpg')
@@ -110,8 +103,8 @@ def plot_acc():
     plt.title('Validation/Test Accuracy')
     plt.xlabel('epoch')
     plt.ylabel('val/test acc')
-    plt.plot(range(0, len(val_acc_list)), val_acc_list, 'g', label='val acc')
-    plt.plot(range(0, len(test_acc_list)), test_acc_list, 'r', label='test acc')
+    plt.plot(range(0, len(VAL_ACC_LIST)), VAL_ACC_LIST, 'g', label='val acc')
+    plt.plot(range(0, len(TEST_ACC_LIST)), TEST_ACC_LIST, 'r', label='test acc')
     plt.legend(['validation accuracy', 'test accuracy'], loc='best')
     plt.show()
     plt.savefig('accuracy.jpg')
