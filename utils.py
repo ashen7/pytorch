@@ -7,8 +7,8 @@ import torchvision
 import numpy as np
 import matplotlib.pyplot as plt
 
-from vggnet import VGGNet
-from mobilenet_v3 import MobileNetV3, MobileNetV3_Small
+from backbone.vggnet import VGGNet
+from backbone.mobilenet_v3 import MobileNetV3, MobileNetV3_Small
 warnings.filterwarnings("ignore")
 
 # 选择数据集和模型
@@ -95,7 +95,7 @@ def plot_loss():
     plt.plot(range(0, len(train_loss_list)), train_loss_list, 'g', label='loss')
     plt.legend(loc='best')
     plt.show()
-    plt.savefig('loss.jpg')
+    plt.savefig('results/loss.jpg')
 
 def plot_acc():
     plt.title('Validation/Test Accuracy')
@@ -105,5 +105,5 @@ def plot_acc():
     plt.plot(range(0, len(test_acc_list)), test_acc_list, 'r', label='test acc')
     plt.legend(['validation accuracy', 'test accuracy'], loc='best')
     plt.show()
-    plt.savefig('accuracy.jpg')
+    plt.savefig('results/accuracy.jpg')
 

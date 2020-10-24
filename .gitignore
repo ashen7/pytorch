@@ -130,6 +130,7 @@ dmypy.json
 *~
 models
 datasets
-allmodel
+allbackbone
 examples
 *.jpg
+pretrained-models
