@@ -16,6 +16,7 @@ DATASET = "pokemon"
 MODEL_NAME = "mobilenet_v3"
 TEST_MODE = "eval"       # eval: evaluate model，test: test model inference 
 USE_PRETRAIN_MODEL = False
+USE_MULTILABEL = True
 
 # 网络超参
 IMAGE_SIZE = 224
@@ -47,8 +48,13 @@ val_acc_list = list()
 test_acc_list = list()
 
 # 导入模型
-def load_model(model_name, use_pretrain_model, num_classes, input_size = None):
+def load_model(model_name, use_pretrain_model, use_multilabel, classes, input_size = None):
     model = None
+    num_classes = None
+    if use_multilabel:
+        num_classes = [len(classes[0]), len(classes[1])]
+    else:
+        num_classes = len(classes)
 
     if model_name == "vggnet":
         if use_pretrain_model:
@@ -60,10 +66,7 @@ def load_model(model_name, use_pretrain_model, num_classes, input_size = None):
     elif model_name == "resnet50":
         pass
     elif model_name == "mobilenet_v3":
-        if use_pretrain_model:
-            model = MobileNetV3(num_classes)
-        else:
-            model = MobileNetV3(num_classes)
+        model = MobileNetV3(num_classes, use_multilabel)
     elif model_name == "eff":
         pass
     else:

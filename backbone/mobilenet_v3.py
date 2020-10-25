@@ -63,8 +63,9 @@ class Block(nn.Module):
 
 
 class MobileNetV3(nn.Module):
-    def __init__(self, num_classes=1000):
+    def __init__(self, num_classes=1000, use_multilabel=False):
         super(MobileNetV3, self).__init__()
+        self.use_multilabel = use_multilabel
         self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(16)
         self.hs1 = hswish()
@@ -93,7 +94,11 @@ class MobileNetV3(nn.Module):
         self.linear3 = nn.Linear(960, 1280)
         self.bn3 = nn.BatchNorm1d(1280)
         self.hs3 = hswish()
-        self.linear4 = nn.Linear(1280, num_classes)
+        if self.use_multilabel:
+            self.linear4 = nn.Linear(1280, num_classes[0])
+            self.linear5 = nn.Linear(1280, num_classes[1])
+        else:
+            self.linear4 = nn.Linear(1280, num_classes)
         self.init_params()
 
     def init_params(self):
@@ -117,10 +122,14 @@ class MobileNetV3(nn.Module):
         out = F.avg_pool2d(out, 7)
         out = out.view(out.size(0), -1)
         out = self.hs3(self.bn3(self.linear3(out)))
-        out = self.linear4(out)
+        if self.use_multilabel:
+            out1 = self.linear4(out)
+            out2 = self.linear5(out)
+            out = [out1, out2]
+        else:
+            out = self.linear4(out)
 
         return out
-
 
 class MobileNetV3_Small(nn.Module):
     def __init__(self, num_classes=1000):
