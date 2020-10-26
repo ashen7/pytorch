@@ -18,7 +18,7 @@ def get_cifar10_training_dataset(batch_size):
     train_dataset = torchvision.datasets.CIFAR10(root=DATASETS_DIR, train=True,
                                                  download=False, transform=transform_train)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
-                                               shuffle=True, num_workers=NUM_CORES)
+                                               shuffle=True, num_workers=CPU_CORES)
     print('Successfully load CIFAR10 training dataset')
 
     return train_loader
@@ -33,49 +33,49 @@ def get_cifar10_test_dataset(batch_size):
     test_dataset = torchvision.datasets.CIFAR10(root=DATASETS_DIR, train=False,
                                                 download=False, transform=transform_test)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
-                                              shuffle=False, num_workers=NUM_CORES)
+                                              shuffle=False, num_workers=CPU_CORES)
     print('Successfully load CIFAR10 test dataset')
 
     return test_loader
 
-def get_pokemon_training_dataset(batch_size, use_multilabel):
-    train_dataset = Pokemon(POKEMON_DIR, RESIZE_HEIGHT, RESIZE_WIDTH, mode='train', use_multilabel=use_multilabel)
+def get_pokemon_training_dataset(batch_size, resize_h, resize_w, use_multilabel):
+    train_dataset = Pokemon(POKEMON_DIR, resize_h, resize_w, mode='train', use_multilabel=use_multilabel)
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size,
-                                               shuffle=True, num_workers=NUM_CORES)
+                                               shuffle=True, num_workers=CPU_CORES)
     print('Successfully load pokemon training dataset')
 
     return train_loader
 
-def get_pokemon_test_dataset(batch_size, use_multilabel):
-    test_dataset = Pokemon(POKEMON_DIR, RESIZE_HEIGHT, RESIZE_WIDTH, mode='test', use_multilabel=use_multilabel)
+def get_pokemon_test_dataset(batch_size, resize_h, resize_w, use_multilabel):
+    test_dataset = Pokemon(POKEMON_DIR, resize_h, resize_w, mode='test', use_multilabel=use_multilabel)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size,
-                                              shuffle=False, num_workers=NUM_CORES)
+                                              shuffle=False, num_workers=CPU_CORES)
     print('Successfully load pokemon test dataset')
 
     return test_loader
 
-def get_training_dataset(batch_size, use_multilabel = False):
+def get_training_dataset(dataset, batch_size, resize_h, resize_w, use_multilabel = False):
     train_loader = None
     
-    if DATASET == "cifar10":
+    if dataset == "cifar10":
         train_loader = get_cifar10_training_dataset(batch_size)
-    elif DATASET == "pokemon":
-        train_loader = get_pokemon_training_dataset(batch_size, use_multilabel)
+    elif dataset == "pokemon":
+        train_loader = get_pokemon_training_dataset(batch_size, resize_h, resize_w, use_multilabel)
     else:
         print("暂不支持该数据集!")
         exit(0)
     
     return train_loader
 
-def get_test_dataset(batch_size, use_multilabel = False):
+def get_test_dataset(dataset, batch_size, resize_h, resize_w, use_multilabel = False):
     test_loader = None
     classes = []
 
-    if DATASET == "cifar10":
+    if dataset == "cifar10":
         test_loader = get_cifar10_test_dataset(batch_size)
         classes = ['飞机', '汽车', '小鸟', '小猫', '小鹿', '小狗', '青蛙', '小马', '小船', '卡车']
-    elif DATASET == "pokemon":
-        test_loader = get_pokemon_test_dataset(batch_size, use_multilabel)
+    elif dataset == "pokemon":
+        test_loader = get_pokemon_test_dataset(batch_size, resize_h, resize_w, use_multilabel)
         if use_multilabel:
             classes1 = ['妙蛙种子', '小火龙', '超梦', '皮卡丘', '杰尼龟']
             classes2 = ['绿色', '橙色', '紫色', '黄色', '蓝色', '粉色', '灰色', '黑色', '棕色']
@@ -91,7 +91,7 @@ def get_test_dataset(batch_size, use_multilabel = False):
 
 def main():
     use_multilabel = True
-    dataset = get_pokemon_training_dataset(BATCH_SIZE, use_multilabel)
+    dataset = get_pokemon_training_dataset('cifar10', 10, use_multilabel)
     # dataset = get_cifar10_training_dataset(BATCH_SIZE)
     for (batch_sample, batch_label) in dataset:
         print(batch_sample.shape, batch_label.shape)

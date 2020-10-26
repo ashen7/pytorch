@@ -156,12 +156,12 @@ def evaluate_multilabel_model(model, device, model_path, test_loader, classes, b
         try:
             print('{}: {}%({}, {})'.format(classes[1][i], round(predict_result_dict2[i] / ground_truth_dict2[i] * 100.0, 2),
                                        predict_result_dict2[i], ground_truth_dict2[i]))
-        except Exception:
-            pass
+        except Exception as e:
+            continue
 
 # 测试一张图片的推理结果
-def test_model_inference(model, device, model_path, classes, use_multilabel):
-    pokemon = Pokemon(POKEMON_DIR, RESIZE_HEIGHT, RESIZE_WIDTH, None, use_multilabel)
+def test_model_inference(model, device, model_path, resize_h, resize_w, classes, use_multilabel):
+    pokemon = Pokemon(POKEMON_DIR, resize_h, resize_w, None, use_multilabel)
     images_list, _ = pokemon.load_csv(os.path.join(POKEMON_DIR, 'pokemon_multilabel.csv'))
     #image_path = os.path.join(POKEMON_DIR, '4杰尼龟', '00000020.jpg')
     #images_list = [image_path]
@@ -213,19 +213,34 @@ def test_model_inference(model, device, model_path, classes, use_multilabel):
                 print(image_path, ':', classes[int(predict_output)])
 
 def main():
-    model_name = MODEL_NAME
-    use_pretrain_model = USE_PRETRAIN_MODEL
-    use_multilabel = USE_MULTILABEL
+    args = parse_args()
+    dataset = args.dataset
+    model_name = args.model_name
+    use_pretrain_model = args.use_pretrain_model
+    use_multilabel = args.use_multilabel
+    test_mode = args.test_mode
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    device_id = DEVICE_ID
-    batch_size = BATCH_SIZE
-    dataset = DATASET
-    input_size = INPUT_SIZE
-    test_mode = "test"
+    device_id = args.device_id
+    device_id_list = args.device_id_list
+    use_multigpu = args.use_multigpu
+
+    image_size = args.image_size
+    resize_h = args.resize_h
+    resize_w = args.resize_w
+    batch_size = args.batch_size
+    max_epoch = args.max_epoch
+    learning_rate = args.learning_rate
+    print_iter_interval = args.print_iter_interval
+    save_model_interval = args.save_model_interval
     model_path = os.getcwd() + "/models/{}_{}.pth".format(model_name, dataset)
 
+    if dataset == "cifar10":
+        image_size = 32
+    input_size = int(512 * (4 + (image_size / 32) - 1) * (4 + (image_size / 32) - 1))
+
     # 得到数据集
-    test_loader, classes = get_test_dataset(batch_size, use_multilabel)
+    test_loader, classes = get_test_dataset(dataset, batch_size, resize_h, resize_w, use_multilabel)
     # 构建网络
     model = load_model(model_name, use_pretrain_model, use_multilabel, classes, input_size)
     
@@ -244,7 +259,7 @@ def main():
         else:
             evaluate_model(model, device, model_path, test_loader, classes, batch_size)
     elif test_mode == "test":
-        test_model_inference(model, device, model_path, classes, use_multilabel)
+        test_model_inference(model, device, model_path, resize_h, resize_w, classes, use_multilabel)
     
 if __name__ == '__main__':
     main()

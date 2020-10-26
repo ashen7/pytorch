@@ -1,5 +1,6 @@
 import os
 import warnings
+import argparse
 
 import torch
 import torch.nn as nn
@@ -11,33 +12,54 @@ from backbone.vggnet import VGGNet
 from backbone.mobilenet_v3 import MobileNetV3, MobileNetV3_Small
 warnings.filterwarnings("ignore")
 
-# 选择数据集和模型
-DATASET = "pokemon"
-MODEL_NAME = "mobilenet_v3"
-TEST_MODE = "eval"       # eval: evaluate model，test: test model inference 
-USE_PRETRAIN_MODEL = False
-USE_MULTILABEL = True
+def parse_args():
+    parser = argparse.ArgumentParser()
 
-# 网络超参
-IMAGE_SIZE = 224
-RESIZE_HEIGHT = 224
-RESIZE_WIDTH = 224
-BATCH_SIZE = 64
-LEARNING_RATE = 0.01
-MAX_EPOCH = 20
-ITER_INTERVAL = 1
-SAVE_MODEL_INTERVAL = 2
-if DATASET == "cifar10":
-    IMAGE_SIZE = 32
-INPUT_SIZE = int (512 * (4 + (IMAGE_SIZE / 32) - 1) * (4 + (IMAGE_SIZE / 32) - 1))
+    # 选择数据集和模型
+    parser.add_argument('-d', '--dataset',      type=str, default='pokemon', 
+                        help='select dataset')
+    parser.add_argument('-m', '--model_name',   type=str, default='mobilenet_v3', 
+                        help='select model')
+    parser.add_argument('-pretrain', '--use_pretrain_model', action='store_true', default=False, 
+                        help='pretrained mdoel')
+    parser.add_argument('-mlabel', '--use_multilabel',         action='store_true', default=False, 
+                        help='single label or multi label')
+    parser.add_argument('-t', '--test_mode',    type=str, default='eval',  
+                        help='test mode(eval/test)')
 
-# GPU Device
-DEVICE_ID = 1
-DEVICE_ID_LIST = [1, 2, 3]
-USE_MULTIGPU = False
+    # GPU Device
+    parser.add_argument('-id', '--device_id',  type=int, default=1, 
+                        help='gpu device id')
+    parser.add_argument('-id_list', '--device_id_list',  type=list, default=[1, 2, 3], 
+                        help='gpu device id list')
+    parser.add_argument('-mgpu', '--use_multigpu', action='store_true', default=False, 
+                        help='single gpu or multi gpu')
+
+    # 网络超参
+    parser.add_argument('-s', '--image_size', type=int, default=224, 
+                        help='image size')
+    parser.add_argument('-rh', '--resize_h',  type=int, default=224, 
+                        help='resize height')
+    parser.add_argument('-rw', '--resize_w',  type=int, default=224, 
+                        help='resize width')
+    parser.add_argument('-b', '--batch_size', type=int, default=64, 
+                        help='batch size')
+    parser.add_argument('-e', '--max_epoch',  type=int, default=20, 
+                        help='max epoch')
+    parser.add_argument('-lr', '--learning_rate',           type=float, default=0.01, 
+                        help='learning rate')
+    parser.add_argument('-p', '--print_iter_interval',      type=int, default=1, 
+                        help='print iter interval')
+    parser.add_argument('-save', '--save_model_interval',   type=int, default=2, 
+                        help='save model interval')
+
+    # argparse
+    args = parser.parse_args()
+
+    return args
 
 # 数据集
-NUM_CORES = 6
+CPU_CORES = 6 
 DATASETS_DIR = os.path.join(os.path.abspath('.'), 'datasets')
 CIFAR10_DIR = os.path.join(DATASETS_DIR, 'cifar-10-batches-py')
 POKEMON_DIR = os.path.join(DATASETS_DIR, 'pokemon')

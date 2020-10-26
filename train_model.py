@@ -5,13 +5,14 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 import torch.optim as optim
-#import visdom
+import visdom
 
 from data_preprocess import get_training_dataset, get_test_dataset
 from utils import *
 
 def train_model(model, device, model_path, train_loader, test_loader,
-                batch_size = 100, learning_rate = 0.001, max_epoch = 20, momentum = 0.9):
+                batch_size = 100, learning_rate = 0.001, max_epoch = 20, 
+                momentum=0.9, print_iter_interval=1, save_model_interval=2):
     global train_loss_list
     global val_acc_list
     global test_acc_list
@@ -93,19 +94,19 @@ def train_model(model, device, model_path, train_loader, test_loader,
                 correct = (predict_output == train_batch_label).sum().item()
                 acc = (correct / len(predict_output))
                 train_acc += acc
-                if (batch_idx + 1) % ITER_INTERVAL == 0:
-                    print('train loss : {}, train acc : {}%'.format(train_loss / ITER_INTERVAL, round(train_acc / ITER_INTERVAL * 100.0, 2)))
-                    train_loss_list.append(train_loss / ITER_INTERVAL)
+                if (batch_idx + 1) % print_iter_interval == 0:
+                    print('train loss : {}, train acc : {}%'.format(train_loss / print_iter_interval, round(train_acc / print_iter_interval * 100.0, 2)))
+                    train_loss_list.append(train_loss / print_iter_interval)
                     train_loss = 0
                     train_acc = 0
         print('=====================Epoch {} validation accuracy is: {}%, spend time: {}s====================='.format(epoch + 1, round(val_acc / val_iter * 100.0, 2), time.time() - begin))
         val_acc_list.append(val_acc / val_iter)
-        # viz.line([val_acc / ITER_INTERVAL], [global_step], win='val_acc', update='append')
+        # viz.line([val_acc / print_iter_interval], [global_step], win='val_acc', update='append')
         val_acc = 0
         val_iter = 0
 
         # 这里一轮迭代完成 每迭代2轮保存一次模型 并测试一次
-        if (epoch + 1) % SAVE_MODEL_INTERVAL == 0:
+        if (epoch + 1) % save_model_interval == 0:
             # 得到测试集
             test_iter_num = len(test_loader)
             test_acc = 0
@@ -148,7 +149,8 @@ def train_model(model, device, model_path, train_loader, test_loader,
     print('Finished Training')
 
 def train_multitask_model(model, device, model_path, train_loader, test_loader,
-                          batch_size=100, learning_rate=0.001, max_epoch=20, momentum=0.9):
+                          batch_size=100, learning_rate=0.001, max_epoch=20, 
+                          momentum=0.9, print_iter_interval=1, save_model_interval=2):
     global train_loss_list
     global val_acc_list
     global test_acc_list
@@ -239,11 +241,11 @@ def train_multitask_model(model, device, model_path, train_loader, test_loader,
                 acc2 = (correct2 / len(predict_output2))
                 train_acc1 += acc1
                 train_acc2 += acc2
-                if (batch_idx + 1) % ITER_INTERVAL == 0:
-                    print('train loss : {}, task1 train acc: {}%, task2 train acc: {}%'.format(train_loss / ITER_INTERVAL,
-                                                                                          round(train_acc1 / ITER_INTERVAL * 100.0, 2),
-                                                                                          round(train_acc2 / ITER_INTERVAL * 100.0, 2)))
-                    train_loss_list.append(train_loss / ITER_INTERVAL)
+                if (batch_idx + 1) % print_iter_interval == 0:
+                    print('train loss : {}, task1 train acc: {}%, task2 train acc: {}%'.format(train_loss / print_iter_interval,
+                                                                                          round(train_acc1 / print_iter_interval * 100.0, 2),
+                                                                                          round(train_acc2 / print_iter_interval * 100.0, 2)))
+                    train_loss_list.append(train_loss / print_iter_interval)
                     train_loss = 0
                     train_acc1 = 0
                     train_acc2 = 0
@@ -257,7 +259,7 @@ def train_multitask_model(model, device, model_path, train_loader, test_loader,
         val_iter = 0
 
         # 这里一轮迭代完成 每迭代2轮保存一次模型 并测试一次
-        if (epoch + 1) % SAVE_MODEL_INTERVAL == 0:
+        if (epoch + 1) % save_model_interval == 0:
             # 得到测试集
             test_iter_num = len(test_loader)
             test_acc1 = 0
@@ -297,23 +299,35 @@ def train_multitask_model(model, device, model_path, train_loader, test_loader,
 
 def main():
     torch.manual_seed(1234)
-    model_name = MODEL_NAME
-    use_pretrain_model = USE_PRETRAIN_MODEL
-    use_multilabel = USE_MULTILABEL
+    args = parse_args()
+    dataset = args.dataset
+    model_name = args.model_name
+    use_pretrain_model = args.use_pretrain_model
+    use_multilabel = args.use_multilabel
+    test_mode = args.test_mode
+
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    device_id = DEVICE_ID
-    use_multigpu = USE_MULTIGPU
-    device_id_list = DEVICE_ID_LIST
-    batch_size = BATCH_SIZE
-    learning_rate = LEARNING_RATE
-    max_epoch = MAX_EPOCH
-    dataset = DATASET
-    input_size = INPUT_SIZE
+    device_id = args.device_id
+    device_id_list = args.device_id_list
+    use_multigpu = args.use_multigpu
+
+    image_size = args.image_size
+    resize_h = args.resize_h
+    resize_w = args.resize_w
+    batch_size = args.batch_size
+    max_epoch = args.max_epoch
+    learning_rate = args.learning_rate
+    print_iter_interval = args.print_iter_interval
+    save_model_interval = args.save_model_interval
     model_path = os.getcwd() + "/models/{}_{}.pth".format(model_name, dataset)
 
+    if dataset == "cifar10":
+        image_size = 32
+    input_size = int(512 * (4 + (image_size / 32) - 1) * (4 + (image_size / 32) - 1))
+
     # 得到数据集
-    train_loader = get_training_dataset(batch_size, use_multilabel)
-    test_loader, classes = get_test_dataset(batch_size, use_multilabel)
+    train_loader = get_training_dataset(dataset, batch_size, resize_h, resize_w, use_multilabel)
+    test_loader, classes = get_test_dataset(dataset, batch_size, resize_h, resize_w, use_multilabel)
     # 构建网络 
     model = load_model(model_name, use_pretrain_model, use_multilabel, classes, input_size)
 
@@ -330,6 +344,8 @@ def main():
     # 训练模型
     if use_multilabel:
         model_path = model_path[:-4] + '_multilabel.pth'
+
+    if use_multilabel:
         train_multitask_model(model, device, model_path, train_loader, test_loader,
                               batch_size, learning_rate, max_epoch)
     else:

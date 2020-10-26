@@ -7,10 +7,7 @@ import csv
 import torch
 import torchvision
 import torchvision.transforms as transforms
-try:
-    import visdom
-except ImportError:
-    pass
+import visdom
 from PIL import Image
 
 from utils import *
