@@ -134,3 +134,4 @@ allbackbone
 examples
 *.jpg
 pretrained-models
+nohup.out
