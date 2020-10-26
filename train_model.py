@@ -329,7 +329,7 @@ def main():
     train_loader = get_training_dataset(dataset, batch_size, resize_h, resize_w, use_multilabel)
     test_loader, classes = get_test_dataset(dataset, batch_size, resize_h, resize_w, use_multilabel)
     # 构建网络 
-    model = load_model(model_name, use_pretrain_model, use_multilabel, classes, input_size)
+    model = create_model(model_name, use_pretrain_model, use_multilabel, classes, input_size)
 
     # 用GPU运行
     if torch.cuda.device_count() > 1:

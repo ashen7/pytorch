@@ -222,17 +222,11 @@ def main():
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     device_id = args.device_id
-    device_id_list = args.device_id_list
-    use_multigpu = args.use_multigpu
 
     image_size = args.image_size
     resize_h = args.resize_h
     resize_w = args.resize_w
     batch_size = args.batch_size
-    max_epoch = args.max_epoch
-    learning_rate = args.learning_rate
-    print_iter_interval = args.print_iter_interval
-    save_model_interval = args.save_model_interval
     model_path = os.getcwd() + "/models/{}_{}.pth".format(model_name, dataset)
 
     if dataset == "cifar10":
@@ -242,7 +236,7 @@ def main():
     # 得到数据集
     test_loader, classes = get_test_dataset(dataset, batch_size, resize_h, resize_w, use_multilabel)
     # 构建网络
-    model = load_model(model_name, use_pretrain_model, use_multilabel, classes, input_size)
+    model = create_model(model_name, use_pretrain_model, use_multilabel, classes, input_size)
     
     # 用GPU运行
     if torch.cuda.device_count() > 1:

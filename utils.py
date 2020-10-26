@@ -69,8 +69,8 @@ train_loss_list = list()
 val_acc_list = list()
 test_acc_list = list()
 
-# 导入模型
-def load_model(model_name, use_pretrain_model, use_multilabel, classes, input_size = None):
+# 创建模型
+def create_model(model_name, use_pretrain_model, use_multilabel, classes, input_size = None):
     model = None
     num_classes = None
     if use_multilabel:
@@ -89,6 +89,7 @@ def load_model(model_name, use_pretrain_model, use_multilabel, classes, input_si
         pass
     elif model_name == "mobilenet_v3":
         model = MobileNetV3(num_classes, use_multilabel)
+    
     elif model_name == "eff":
         pass
     else:

@@ -137,3 +137,4 @@ pretrained-models
 nohup.out
 pybind11
 onnx
+onnx2caffe
