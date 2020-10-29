@@ -321,15 +321,16 @@ def main():
     save_model_interval = args.save_model_interval
     model_path = os.getcwd() + "/models/{}_{}.pth".format(model_name, dataset)
 
-    if dataset == "cifar10":
-        image_size = 32
-    input_size = int(512 * (4 + (image_size / 32) - 1) * (4 + (image_size / 32) - 1))
-
     # 得到数据集
     train_loader = get_training_dataset(dataset, batch_size, resize_h, resize_w, use_multilabel)
     test_loader, classes = get_test_dataset(dataset, batch_size, resize_h, resize_w, use_multilabel)
+    num_classes = None
+    if use_multilabel:
+        num_classes = [len(classify) for classify in classes]
+    else:
+        num_classes = len(classes)
     # 构建网络 
-    model = create_model(model_name, use_pretrain_model, use_multilabel, classes, input_size)
+    model = build_model(model_name, num_classes, use_pretrain_model, use_multilabel)
 
     # 用GPU运行
     if torch.cuda.device_count() > 1:

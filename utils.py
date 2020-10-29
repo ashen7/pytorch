@@ -63,34 +63,31 @@ CPU_CORES = 6
 DATASETS_DIR = os.path.join(os.path.abspath('.'), 'datasets')
 CIFAR10_DIR = os.path.join(DATASETS_DIR, 'cifar-10-batches-py')
 POKEMON_DIR = os.path.join(DATASETS_DIR, 'pokemon')
+CAR_MIX_DIR = os.path.join(DATASETS_DIR, 'car_mix')
 
 # loss和acc
 train_loss_list = list()
 val_acc_list = list()
 test_acc_list = list()
 
-# 创建模型
-def create_model(model_name, use_pretrain_model, use_multilabel, classes, input_size = None):
+# 构建模型
+def build_model(model_name, num_classes, use_pretrain_model = False, use_multilabel = False):
     model = None
-    num_classes = None
-    if use_multilabel:
-        num_classes = [len(classes[0]), len(classes[1])]
-    else:
-        num_classes = len(classes)
 
     if model_name == "vggnet":
         if use_pretrain_model:
             model = torchvision.models.vgg16(pretrained=True)
         else:
-            model = VGGNet(num_classes, input_size)
+            model = VGGNet(num_classes)
+    elif model_name == "mobilenet_v3":
+        model = MobileNetV3(num_classes, use_multilabel)
     elif model_name == "resnet18":
         pass
     elif model_name == "resnet50":
         pass
-    elif model_name == "mobilenet_v3":
-        model = MobileNetV3(num_classes, use_multilabel)
-    
-    elif model_name == "eff":
+    elif model_name == "effnet":
+        pass
+    elif model_name == "fbnet":
         pass
     else:
         print("暂不支持该模型!")

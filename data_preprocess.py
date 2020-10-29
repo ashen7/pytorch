@@ -61,6 +61,8 @@ def get_training_dataset(dataset, batch_size, resize_h, resize_w, use_multilabel
         train_loader = get_cifar10_training_dataset(batch_size)
     elif dataset == "pokemon":
         train_loader = get_pokemon_training_dataset(batch_size, resize_h, resize_w, use_multilabel)
+    elif dataset == "car_mix":
+        train_loader = get_car_mix_training_dataset(batch_size, use_multilabel)
     else:
         print("暂不支持该数据集!")
         exit(0)
@@ -77,12 +79,20 @@ def get_test_dataset(dataset, batch_size, resize_h, resize_w, use_multilabel = F
     elif dataset == "pokemon":
         test_loader = get_pokemon_test_dataset(batch_size, resize_h, resize_w, use_multilabel)
         if use_multilabel:
-            classes1 = ['妙蛙种子', '小火龙', '超梦', '皮卡丘', '杰尼龟']
-            classes2 = ['绿色', '橙色', '紫色', '黄色', '蓝色', '粉色', '灰色', '黑色', '棕色']
+            obj_classes = ['妙蛙种子', '小火龙', '超梦', '皮卡丘', '杰尼龟']
+            color_classes = ['绿色', '橙色', '紫色', '黄色', '蓝色', '粉色', '灰色', '黑色', '棕色']
             # classes2 = ['红色', '黄色', '绿色', '蓝色', '紫色']
-            classes = [classes1, classes2]
+            classes = [obj_classes, color_classes]
         else:
             classes = ['妙蛙种子', '小火龙', '超梦', '皮卡丘', '杰尼龟']
+    elif dataset == "car_mix":
+        test_loader = get_car_mix_test_dataset(batch_size, use_multilabel)
+        car_kind_classes = ['']
+        car_sunroof_classes2 = ['']
+        car_rack_classes3 = ['']
+        car_spareclasses4 = ['']
+
+        classes = [classes1, classes2, classes3, classes4]
     else:
         print("暂不支持该数据集!")
         exit(0)

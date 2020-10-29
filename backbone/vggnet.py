@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class VGGNet(nn.Module):
-    def __init__(self, num_classes = 1000, input_size = None):
+    def __init__(self, num_classes = 1000):
         # 调用VGGNet的父类的构造函数
         super(VGGNet, self).__init__()
 
@@ -49,7 +49,7 @@ class VGGNet(nn.Module):
         self.relu5 = nn.ReLU()
 
         # 全连接层  输入节点 输出节点
-        self.fc14 = nn.Linear(input_size, 1024)
+        self.fc14 = nn.Linear(512*4*4, 1024)
         self.dropout1 = nn.Dropout2d()
         self.fc15 = nn.Linear(1024, 1024)
         self.dropout2 = nn.Dropout2d()
